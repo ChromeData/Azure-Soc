@@ -1,76 +1,52 @@
-# Azure-Soc
-# Building a SOC + Honeynet in Azure (Live Traffic)
+# Azure SOC and Honeynet
+
+I built a small network of deliberately exposed machines (a honeynet) in Azure, let real attackers on the internet hit it for 24 hours, then locked it down and measured another 24 hours. Microsoft Sentinel collected the logs, drew attack maps and raised alerts.
+
 ![Cloud Honeynet / SOC](https://i.imgur.com/ZWxe03e.jpg)
 
-## Introduction
+## Result
 
-In this project, I build a mini honeynet in Azure and ingest log sources from various resources into a Log Analytics workspace, which is then used by Microsoft Sentinel to build attack maps, trigger alerts, and create incidents. I measured some security metrics in the insecure environment for 24 hours, apply some security controls to harden the environment, measure metrics for another 24 hours, then show the results below. The metrics we will show are:
+Hardening cut security incidents from **348 to 0** and malicious traffic reaching the network from **843 to 0**.
 
-- SecurityEvent (Windows Event Logs)
-- Syslog (Linux Event Logs)
-- SecurityAlert (Log Analytics Alerts Triggered)
-- SecurityIncident (Incidents created by Sentinel)
-- AzureNetworkAnalytics_CL (Malicious Flows allowed into our honeynet)
+| What was measured | Before | After | Change |
+|---|---|---|---|
+| Windows security events | 19,470 | 8,778 | −55% |
+| Linux auth logs (Syslog) | 3,028 | 25 | −99% |
+| Alerts | 10 | 0 | −100% |
+| Sentinel incidents | 348 | 0 | −100% |
+| Malicious network flows allowed in | 843 | 0 | −100% |
 
-## Architecture Before Hardening / Security Controls
-![Architecture Diagram](https://i.imgur.com/aBDwnKb.jpg)
+Before: Mar 15–16, 2023. After: Mar 18–19, 2023. 24 hours each.
 
-## Architecture After Hardening / Security Controls
-![Architecture Diagram](https://i.imgur.com/YQNa9Pp.jpg)
+## What I built
 
-The architecture of the mini honeynet in Azure consists of the following components:
+- 1 virtual network with a network security group (NSG)
+- 3 virtual machines: 2 Windows, 1 Linux
+- Log Analytics workspace collecting all logs
+- Key Vault and Storage Account
+- Microsoft Sentinel for alerts, incidents and attack maps
 
-- Virtual Network (VNet)
-- Network Security Group (NSG)
-- Virtual Machines (2 windows, 1 linux)
-- Log Analytics Workspace
-- Azure Key Vault
-- Azure Storage Account
-- Microsoft Sentinel
+## Before: wide open
 
-For the "BEFORE" metrics, all resources were originally deployed, exposed to the internet. The Virtual Machines had both their Network Security Groups and built-in firewalls wide open, and all other resources are deployed with public endpoints visible to the Internet; aka, no use for Private Endpoints.
+Firewalls and NSGs were open to the whole internet, and every resource had a public endpoint.
 
-For the "AFTER" metrics, Network Security Groups were hardened by blocking ALL traffic with the exception of my admin workstation, and all other resources were protected by their built-in firewalls as well as Private Endpoint
+![Architecture before](https://i.imgur.com/aBDwnKb.jpg)
 
-## Attack Maps Before Hardening / Security Controls
-![NSG Allowed Inbound Malicious Flows](https://i.imgur.com/1qvswSX.png)<br>
-![Linux Syslog Auth Failures](https://i.imgur.com/G1YgZt6.png)<br>
-![Windows RDP/SMB Auth Failures](https://i.imgur.com/ESr9Dlv.png)<br>
+Attack maps from the first 24 hours:
 
-## Metrics Before Hardening / Security Controls
+![NSG allowed inbound malicious flows](https://i.imgur.com/1qvswSX.png)
+![Linux SSH auth failures](https://i.imgur.com/G1YgZt6.png)
+![Windows RDP/SMB auth failures](https://i.imgur.com/ESr9Dlv.png)
 
-The following table shows the metrics we measured in our insecure environment for 24 hours:
-Start Time 2023-03-15 17:04:29
-Stop Time 2023-03-16 17:04:29
+## After: locked down
 
-| Metric                   | Count
-| ------------------------ | -----
-| SecurityEvent            | 19470
-| Syslog                   | 3028
-| SecurityAlert            | 10
-| SecurityIncident         | 348
-| AzureNetworkAnalytics_CL | 843
+- NSGs block all traffic except my own admin computer.
+- Key Vault and Storage use their built-in firewalls and private endpoints (no public access).
 
-## Attack Maps Before Hardening / Security Controls
+![Architecture after](https://i.imgur.com/YQNa9Pp.jpg)
 
-```All map queries actually returned no results due to no instances of malicious activity for the 24 hour period after hardening.```
+After hardening, the attack map queries returned nothing: no malicious activity got through.
 
-## Metrics After Hardening / Security Controls
+**Note:** the machines had no real users, so a busy network would still generate some events after hardening.
 
-The following table shows the metrics we measured in our environment for another 24 hours, but after we have applied security controls:
-Start Time 2023-03-18 15:37
-Stop Time	2023-03-19 15:37
-
-| Metric                   | Count
-| ------------------------ | -----
-| SecurityEvent            | 8778
-| Syslog                   | 25
-| SecurityAlert            | 0
-| SecurityIncident         | 0
-| AzureNetworkAnalytics_CL | 0
-
-## Conclusion
-
-In this project, a mini honeynet was constructed in Microsoft Azure and log sources were integrated into a Log Analytics workspace. Microsoft Sentinel was employed to trigger alerts and create incidents based on the ingested logs. Additionally, metrics were measured in the insecure environment before security controls were applied, and then again after implementing security measures. It is noteworthy that the number of security events and incidents were drastically reduced after the security controls were applied, demonstrating their effectiveness.
-
-It is worth noting that if the resources within the network were heavily utilized by regular users, it is likely that more security events and alerts may have been generated within the 24-hour period following the implementation of the security controls.
+**Built with:** Microsoft Azure, Microsoft Sentinel, Log Analytics, KQL, NSGs, Private Endpoints
